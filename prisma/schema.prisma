@@ -1,0 +1,30 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Hash {
+  id           Int            @id @default(autoincrement())
+  key          String         @unique                    
+  value        String
+  restaurantId Int            @default(0)  
+  preview      Boolean        @default(true)
+  createdAt    DateTime       @default(now())
+  deletedAt    DateTime?
+}
+
+model CouponConfig {
+  id         Int    @id @default(autoincrement()) 
+  name       String
+  validDate  DateTime?
+  img        String?
+  isEmpty    Boolean?
+  weight     Int?
+  quantity   Int?
+  order      Int?
+  hashId     String 
+}

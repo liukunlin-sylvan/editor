@@ -1,0 +1,3 @@
+-- AlterTable
+ALTER TABLE "CouponConfig" ALTER COLUMN "img" DROP NOT NULL,
+ALTER COLUMN "isEmpty" DROP NOT NULL;

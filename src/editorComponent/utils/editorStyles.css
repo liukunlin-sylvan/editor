@@ -1,0 +1,43 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer components {
+  .editor-component {
+    @apply flex items-center mb-1 gap-3;
+  }
+
+  .editor-input {
+    @apply w-full py-2 px-4 border rounded-3xl bg-[#E6EAF1] text-[12px];
+  }
+
+  .editor-textarea {
+    @apply w-full py-2 px-4 my-2 border rounded-bl-3xl rounded-t-3xl bg-[#E6EAF1] text-[12px] min-h-9;
+  }
+
+  .text-configuration-div {
+    @apply flex bg-white rounded-xl shadow-lg mt-6;
+  }
+
+  .phone-input {
+    @apply flex items-center rounded-3xl focus-within:outline;
+  }
+
+  .phone-input select {
+    @apply w-full min-w-[120px] py-2 px-4 border-0 rounded-l-3xl bg-[#E6EAF1] text-[12px] focus:outline-none;
+  }
+
+  .phone-input .PhoneInputCountry {
+    @apply h-[36px] flex items-center border border-r-0 rounded-l-3xl bg-[#E6EAF1];
+  }
+
+  .phone-input input {
+    @apply w-full py-2 px-4 border border-l-0 rounded-r-3xl bg-[#E6EAF1] text-[12px] focus:outline-none;
+  }
+
+  .sketch-picker input {
+    background-color: white !important;
+    color: black !important;
+    border: 1px solid #ccc;
+  }
+}
