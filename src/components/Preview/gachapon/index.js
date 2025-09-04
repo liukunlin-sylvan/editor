@@ -1,3 +1,4 @@
+'use client';
 import React, { useEffect } from 'react';
 import MachineBody from '../gachapon/MachineBody';
 import Footer from '../common/Footer';

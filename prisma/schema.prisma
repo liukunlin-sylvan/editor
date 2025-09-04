@@ -7,24 +7,276 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model Hash {
-  id           Int            @id @default(autoincrement())
-  key          String         @unique                    
-  value        String
-  restaurantId Int            @default(0)  
-  preview      Boolean        @default(true)
-  createdAt    DateTime       @default(now())
-  deletedAt    DateTime?
+model color_theme {
+  color_theme_id Int    @id
+  enum_name      String @unique
 }
 
-model CouponConfig {
-  id         Int    @id @default(autoincrement()) 
-  name       String
-  validDate  DateTime?
-  img        String?
-  isEmpty    Boolean?
-  weight     Int?
-  quantity   Int?
-  order      Int?
-  hashId     String 
+model commenting {
+  description   String?
+  tags          Int[]
+  create_time   DateTime @db.Timestamptz(6)
+  rating        Int
+  commenting_id Int      @id @unique @default(autoincrement())
+  diary_id      Int?
+  title         String?
+  appreciation  String?
+  image_id      String   @unique @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+}
+
+/// === CouponConfig ===
+model coupon_config {
+  id         Int     @id @default(autoincrement())
+  hashId     String? @map("hash_id")
+  couponCode String  @map("coupon_code")
+  weight     Int
+  quantity   Int
+  metadata   Json?
+
+  hash Hash? @relation(fields: [hashId], references: [key], onDelete: Cascade, onUpdate: NoAction)
+
+  @@unique([hashId, couponCode], map: "coupon_config_uq")
+  @@map("coupon_config") // 映射到表 coupon_config
+}
+
+// model coupon_config {
+//   id          Int     @id @default(autoincrement())
+//   hash_id     String?
+//   coupon_code String
+//   weight      Int
+//   quantity    Int
+//   metadata    Json?
+//   hash        hash?   @relation(fields: [hash_id], references: [key], onDelete: Cascade, onUpdate: NoAction)
+//
+//   @@unique([hash_id, coupon_code], map: "coupon_config_uq")
+// }
+
+model coupon_redemptions {
+  id                String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  loyalty_card_id   String?        @db.Uuid
+  coupon_data       Json
+  redeemed_at       DateTime?      @default(now()) @db.Timestamptz(6)
+  redeemed_by_staff String?        @db.Uuid
+  is_used           Boolean?       @default(false)
+  loyalty_cards     loyalty_cards? @relation(fields: [loyalty_card_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  users             users?         @relation(fields: [redeemed_by_staff], references: [id], onDelete: NoAction, onUpdate: NoAction)
+}
+
+model diary {
+  user_uuid     String @db.Uuid
+  diary_id      Int    @id(map: "customer_pkey") @unique(map: "customer_customer_id_key") @default(autoincrement())
+  restaurant_id Int?
+  users         users  @relation(fields: [user_uuid], references: [id], onDelete: Cascade, map: "customer_customer_uuid_fkey")
+}
+
+/// === DrawLog ===
+model DrawLog {
+  id         BigInt    @id @default(autoincrement())
+  hashId     String?   @map("hash_id")
+  userId     String?   @map("user_id") @db.Uuid
+  couponCode String    @map("coupon_code")
+  createdAt  DateTime? @map("created_at") @db.Timestamp(6)
+
+  hash Hash? @relation(fields: [hashId], references: [key], onUpdate: NoAction)
+
+  @@map("draw_log") // 映射到表 draw_log
+}
+
+// model draw_log {
+//   id          BigInt    @id @default(autoincrement())
+//   hash_id     String?
+//   user_id     String?   @db.Uuid
+//   coupon_code String
+//   created_at  DateTime? @default(now()) @db.Timestamp(6)
+//   hash        hash?     @relation(fields: [hash_id], references: [key], onUpdate: NoAction)
+// }
+
+model editor {
+  id            String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  user_id       String          @unique @db.Uuid
+  content_json  String?
+  time          DateTime?       @default(now()) @db.Timestamp(6)
+  link          String?
+  name          String?
+  qr_code       String?
+  user_name     String?         @db.Char(30)
+  image_url     String?
+  users         users           @relation(fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  loyalty_cards loyalty_cards[]
+}
+
+model font_size {
+  font_size_id Int    @id
+  enum_name    String @unique
+}
+
+model font_type {
+  font_type_id Int    @id
+  enum_name    String @unique
+}
+
+/// === Hash ===
+model Hash {
+  key          String    @id
+  value        Json
+  restaurantId String?   @map("restaurant_id") @db.Uuid
+  preview      String? // 库里就是文本，保持 String
+  createdAt    DateTime? @map("created_at") @db.Timestamp(6)
+
+  couponConfig coupon_config[]
+  drawLog      DrawLog[]
+
+  @@map("hash") // 映射到表 hash
+}
+
+// model hash {
+//   key           String          @id
+//   value         Json
+//   restaurant_id String?         @db.Uuid
+//   preview       String?
+//   created_at    DateTime?       @default(now()) @db.Timestamp(6)
+//   coupon_config coupon_config[]
+//   draw_log      draw_log[]
+// }
+
+model images {
+  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  user_id    String   @db.Uuid
+  image_name String
+  image_url  String
+  created_at DateTime @default(now()) @db.Timestamptz(6)
+  updated_at DateTime @default(now()) @db.Timestamptz(6)
+  users      users    @relation(fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+}
+
+model loyalty_cards {
+  id                 String               @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  customer_id        String               @db.Uuid
+  restaurant_id      Int?
+  total_stamps       Int?                 @default(0)
+  max_stamps         Int?                 @default(6)
+  created_at         DateTime?            @default(now()) @db.Timestamptz(6)
+  is_active          Boolean?             @default(true)
+  card_design_id     String?              @db.Uuid
+  coupon_redemptions coupon_redemptions[]
+  editor             editor?              @relation(fields: [card_design_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  users              users                @relation(fields: [customer_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  restaurant         restaurant?          @relation(fields: [restaurant_id], references: [restaurant_id], onDelete: NoAction, onUpdate: NoAction)
+  stamp_transactions stamp_transactions[]
+
+  @@unique([customer_id, restaurant_id], map: "unique_customer_restaurant")
+}
+
+model permissions {
+  id          String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name        String        @db.VarChar
+  description String?
+  rolepermrel rolepermrel[]
+}
+
+model profile {
+  id               String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  user_id          String  @unique @db.Uuid
+  first_name       String  @db.Char(30)
+  last_name        String  @db.Char(30)
+  job_title        String? @db.Char(30)
+  business_email   String  @db.VarChar
+  restaurant_name  String? @db.VarChar
+  business_website String? @db.VarChar
+  interest_area    String? @db.VarChar
+  locations_number Int?
+  avatar           String? @db.VarChar
+  users            users   @relation(fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+}
+
+model restaurant {
+  restaurant_id       Int                  @id @default(autoincrement())
+  restaurant_location String
+  restaurant_type     String               @db.Char(30)
+  menu                String[]
+  dishes_images       String[]
+  game_available      String[]
+  media_link          String
+  restaurant_link     String?
+  restaurant_name     String
+  restaurant_owner_id String               @db.Uuid
+  loyalty_cards       loyalty_cards[]
+  stamp_transactions  stamp_transactions[]
+}
+
+model restaurant_owner {
+  restaurant_owner_id String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  email               String @unique
+  vip_level           Int    @default(1)
+  password            String
+}
+
+model restaurant_theme_settings {
+  restaurant_theme_settings_id String @id @unique @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  value                        Json   @default("{}") @db.Json
+  restaurant_id                Int    @unique
+}
+
+model rolepermrel {
+  role_id       String      @db.Uuid
+  permission_id String      @db.Uuid
+  permissions   permissions @relation(fields: [permission_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@id([role_id, permission_id])
+}
+
+model roles {
+  name        String  @db.VarChar
+  description String?
+  id          Int     @id @unique @default(autoincrement())
+}
+
+model stamp_transactions {
+  id                                            String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  loyalty_card_id                               String?        @db.Uuid
+  staff_user_id                                 String?        @db.Uuid
+  customer_id                                   String?        @db.Uuid
+  restaurant_id                                 Int?
+  stamps_added                                  Int?           @default(1)
+  transaction_type                              String?        @default("earned") @db.VarChar(20)
+  qr_code_used                                  String?
+  created_at                                    DateTime?      @default(now()) @db.Timestamptz(6)
+  metadata                                      Json?
+  users_stamp_transactions_customer_idTousers   users?         @relation("stamp_transactions_customer_idTousers", fields: [customer_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  loyalty_cards                                 loyalty_cards? @relation(fields: [loyalty_card_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  restaurant                                    restaurant?    @relation(fields: [restaurant_id], references: [restaurant_id], onDelete: NoAction, onUpdate: NoAction)
+  users_stamp_transactions_staff_user_idTousers users?         @relation("stamp_transactions_staff_user_idTousers", fields: [staff_user_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+}
+
+model svg_type {
+  svg_type_id Int    @id
+  enum_name   String @unique
+}
+
+model userrolerel {
+  user_id String @db.Uuid
+  role_id String @db.Uuid
+
+  @@id([user_id, role_id])
+}
+
+model users {
+  email                                                      String               @unique(map: "unique_email") @db.Char(30)
+  user_name                                                  String?              @db.Char(20)
+  id                                                         String               @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  age                                                        Int?
+  gender                                                     Boolean?
+  address                                                    String?
+  last_seen                                                  DateTime?            @db.Timestamp(6)
+  role_id                                                    Int?
+  subscription_plan                                          String?
+  stripe_customer_id                                         String?
+  coupon_redemptions                                         coupon_redemptions[]
+  diary                                                      diary[]
+  editor                                                     editor?
+  images                                                     images[]
+  loyalty_cards                                              loyalty_cards[]
+  profile                                                    profile?
+  stamp_transactions_stamp_transactions_customer_idTousers   stamp_transactions[] @relation("stamp_transactions_customer_idTousers")
+  stamp_transactions_stamp_transactions_staff_user_idTousers stamp_transactions[] @relation("stamp_transactions_staff_user_idTousers")
 }
